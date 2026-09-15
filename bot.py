@@ -10,8 +10,8 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
 # ====== PUT YOUR SETTINGS HERE ======
-BOT_TOKEN = "PASTE_YOUR_BOT_TOKEN_HERE"
-ADMIN_IDS = {123456789}
+BOT_TOKEN = "8603037987:AAH0r1zl-t85wcVGvNEtwRlUCAu53cWF2lY"
+ADMIN_IDS = {8385712100}
 
 # Your own/authorized SMS gateway:
 SMS_GATEWAY_URL = "https://YOUR-SMS-GATEWAY.example/send"
