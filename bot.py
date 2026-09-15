@@ -16,7 +16,7 @@ from telegram.ext import (
 # No Railway Variables are required.
 # ==============================
 
-BOT_TOKEN = "8603037987:AAG8z1ufOANe8gJBPkSffSQqEXmwS4ZkBi4"
+BOT_TOKEN = "8603037987:AAEBvxKZvSsd-4d6u8vo9WhKStiQPWZN9Lw"
 
 # Your Telegram numeric user ID.
 # For multiple admins: {123456789, 8385712100}
