@@ -13,8 +13,8 @@ from telegram.ext import (
 # Railway Variables:
 # BOT_TOKEN = your BotFather token
 # ADMIN_IDS = your Telegram user ID, e.g. 123456789
-BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
-ADMIN_IDS_RAW = os.getenv("ADMIN_IDS", "").strip()
+BOT_TOKEN = os.getenv("8603037987:AAG8z1ufOANe8gJBPkSffSQqEXmwS4ZkBi4", "").strip()
+ADMIN_IDS_RAW = os.getenv("8385712100", "").strip()
 
 try:
     ADMIN_IDS = {
