@@ -1,160 +1,164 @@
-import os
-import json
-import secrets
-import sqlite3
-import time
-import hashlib
-from urllib.request import Request, urlopen
+from pathlib import Path
+import re
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
-# ====== PUT YOUR SETTINGS HERE ======
-BOT_TOKEN = "8603037987:AAH0r1zl-t85wcVGvNEtwRlUCAu53cWF2lY"
+# ===== BOT SETTINGS =====
+BOT_TOKEN = "8603037987:AAGGsVvwtd5POCxed6JFPRdwoQ43gUFjuJk"
 ADMIN_IDS = {8385712100}
+# =========================
 
-# Your own/authorized SMS gateway:
-SMS_GATEWAY_URL = "https://YOUR-SMS-GATEWAY.example/send"
-SMS_GATEWAY_API_KEY = "PASTE_YOUR_SMS_GATEWAY_KEY_HERE"
+src = Path("/mnt/data/bot_limited.py")
+text = src.read_text(encoding="utf-8")
 
-OTP_EXPIRY_SECONDS = 300
-MAX_SENDS_PER_MINUTE = 10
-MAX_SENDS_PER_DAY = 1000
-# ====================================
+# Service selection state.
+text = text.replace(
+    'DB_FILE = "otp_bot.db"',
+    '''DB_FILE = "otp_bot.db"
+SERVICES = ["Facebook", "WhatsApp", "Instagram", "Telegram", "Other Service"]
+SELECTED_SERVICE = {}'''
+)
 
-DB_FILE = "otp_bot.db"
-
-def init_db():
-    with sqlite3.connect(DB_FILE) as c:
-        c.execute("""CREATE TABLE IF NOT EXISTS otp(
+# Add service column and migration.
+old_db = '''c.execute("""CREATE TABLE IF NOT EXISTS sends(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            phone TEXT, otp_hash TEXT, status TEXT,
-            created INTEGER, expires INTEGER)""")
-        c.execute("""CREATE TABLE IF NOT EXISTS sends(
+            phone TEXT, created INTEGER, status TEXT)""")'''
+new_db = '''c.execute("""CREATE TABLE IF NOT EXISTS sends(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            phone TEXT, created INTEGER, status TEXT)""")
+            phone TEXT, created INTEGER, status TEXT, service TEXT)""")
+        cols = [r[1] for r in c.execute("PRAGMA table_info(sends)").fetchall()]
+        if "service" not in cols:
+            c.execute("ALTER TABLE sends ADD COLUMN service TEXT DEFAULT 'Other Service'")'''
+text = text.replace(old_db, new_db)
 
-def allowed_to_send():
-    t = int(time.time())
-    with sqlite3.connect(DB_FILE) as c:
-        minute = c.execute(
-            "SELECT COUNT(*) FROM sends WHERE created>=? AND status='SENT'",
-            (t-60,)).fetchone()[0]
-        day = c.execute(
-            "SELECT COUNT(*) FROM sends WHERE created>=? AND status='SENT'",
-            (t-86400,)).fetchone()[0]
-    if minute >= MAX_SENDS_PER_MINUTE:
-        return False, f"Per-minute limit reached: {MAX_SENDS_PER_MINUTE}"
-    if day >= MAX_SENDS_PER_DAY:
-        return False, f"Daily limit reached: {MAX_SENDS_PER_DAY}"
-    return True, ""
-
-def send_sms(phone, message):
-    if "YOUR-SMS-GATEWAY" in SMS_GATEWAY_URL or SMS_GATEWAY_API_KEY.startswith("PASTE_"):
-        return False, "Configure your authorized SMS gateway in bot.py."
-    data = json.dumps({"to": phone, "message": message}).encode()
-    req = Request(SMS_GATEWAY_URL, data=data, method="POST", headers={
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {SMS_GATEWAY_API_KEY}"
-    })
-    try:
-        with urlopen(req, timeout=20) as r:
-            return 200 <= r.status < 300, f"HTTP {r.status}"
-    except Exception as e:
-        return False, str(e)[:200]
-
-def admin(update):
-    return bool(update.effective_user and update.effective_user.id in ADMIN_IDS)
-
-def menu():
+# Bottom-style menu: buttons are all at the bottom of the message.
+start = text.index("def menu():")
+end = text.index("\n\nasync def start", start)
+menus = '''def menu():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📱 Send OTP", callback_data="send"),
-         InlineKeyboardButton("📊 Statistics", callback_data="stats")],
-        [InlineKeyboardButton("📋 History", callback_data="history"),
-         InlineKeyboardButton("⚙️ Limits", callback_data="limits")],
+        [InlineKeyboardButton("📱 Select Service", callback_data="services")],
+        [InlineKeyboardButton("📤 Send OTP", callback_data="send")],
+        [InlineKeyboardButton("📊 Statistics", callback_data="stats"),
+         InlineKeyboardButton("📋 History", callback_data="history")],
+        [InlineKeyboardButton("⚙️ Limits", callback_data="limits")],
     ])
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not admin(update):
-        await update.message.reply_text("Access denied.")
+def service_menu():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📘 Facebook", callback_data="service:0")],
+        [InlineKeyboardButton("🟢 WhatsApp", callback_data="service:1")],
+        [InlineKeyboardButton("📸 Instagram", callback_data="service:2")],
+        [InlineKeyboardButton("✈️ Telegram", callback_data="service:3")],
+        [InlineKeyboardButton("➕ Other Service", callback_data="service:4")],
+        [InlineKeyboardButton("🔙 Back", callback_data="back")],
+    ])
+'''
+text = text[:start] + menus + text[end:]
+
+# Require a selected service for sending.
+text = text.replace(
+    'phone = context.args[0].strip()\n    ok, reason = allowed_to_send(phone)',
+    '''phone = context.args[0].strip()
+    service = SELECTED_SERVICE.get(update.effective_user.id)
+    if not service:
+        await update.message.reply_text(
+            "📱 Select a service first:",
+            reply_markup=service_menu()
+        )
         return
-    await update.message.reply_text("🔐 OTP Admin Panel", reply_markup=menu())
+    ok, reason = allowed_to_send(phone)'''
+)
 
-async def sendotp(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not admin(update):
-        return
-    if not context.args:
-        await update.message.reply_text("Usage: /sendotp 8801XXXXXXXXX")
-        return
+# Store service with each send.
+text = text.replace(
+    'INSERT INTO sends(phone,created,status) VALUES(?,?,?)',
+    'INSERT INTO sends(phone,created,status,service) VALUES(?,?,?,?)'
+)
+text = text.replace(
+    '(phone, t, status))',
+    '(phone, t, status, service))'
+)
 
-    phone = context.args[0].strip()
-    ok, reason = allowed_to_send()
-    if not ok:
-        await update.message.reply_text("⛔ " + reason)
-        return
-
-    otp = "".join(secrets.choice("0123456789") for _ in range(6))
-    t = int(time.time())
-    sent, detail = send_sms(
-        phone,
-        f"Your verification code is {otp}. It expires in 5 minutes."
-    )
-    status = "SENT" if sent else "FAILED"
-
-    with sqlite3.connect(DB_FILE) as c:
-        c.execute(
-            "INSERT INTO otp(phone,otp_hash,status,created,expires) VALUES(?,?,?,?,?)",
-            (phone, hashlib.sha256(otp.encode()).hexdigest(),
-             status, t, t + OTP_EXPIRY_SECONDS))
-        c.execute(
-            "INSERT INTO sends(phone,created,status) VALUES(?,?,?)",
-            (phone, t, status))
-
-    await update.message.reply_text(
-        f"✅ OTP sent to {phone}" if sent
-        else f"❌ Send failed: {detail}"
-    )
-
-async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# Replace callback handler body with service-aware version.
+start = text.index("async def buttons(")
+end = text.index("\n\ndef main():", start)
+handler = '''async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     await q.answer()
     if not admin(update):
         return
 
+    if q.data == "services":
+        await q.edit_message_text("📱 Select Service", reply_markup=service_menu())
+        return
+
+    if q.data == "back":
+        await q.edit_message_text("🔐 OTP Admin Panel", reply_markup=menu())
+        return
+
+    if q.data.startswith("service:"):
+        try:
+            idx = int(q.data.split(":", 1)[1])
+            service = SERVICES[idx]
+        except (ValueError, IndexError):
+            await q.edit_message_text("Invalid service.", reply_markup=menu())
+            return
+        SELECTED_SERVICE[update.effective_user.id] = service
+        await q.edit_message_text(
+            f"✅ Selected: {service}\\n\\nUse /sendotp 8801XXXXXXXXX",
+            reply_markup=menu()
+        )
+        return
+
     with sqlite3.connect(DB_FILE) as c:
         if q.data == "stats":
-            sent = c.execute("SELECT COUNT(*) FROM sends WHERE status='SENT'").fetchone()[0]
-            failed = c.execute("SELECT COUNT(*) FROM sends WHERE status='FAILED'").fetchone()[0]
-            text = f"📊 Statistics\n\n✅ Sent: {sent}\n❌ Failed: {failed}"
+            sent = c.execute(
+                "SELECT COUNT(*) FROM sends WHERE status='SENT'"
+            ).fetchone()[0]
+            failed = c.execute(
+                "SELECT COUNT(*) FROM sends WHERE status='FAILED'"
+            ).fetchone()[0]
+            text = f"📊 Statistics\\n\\n✅ Sent: {sent}\\n❌ Failed: {failed}"
+
         elif q.data == "history":
             rows = c.execute(
-                "SELECT phone,status,created FROM sends ORDER BY id DESC LIMIT 20"
+                "SELECT phone,status,created,service "
+                "FROM sends ORDER BY id DESC LIMIT 20"
             ).fetchall()
-            text = "📋 History\n\n" + (
-                "\n".join(f"• {r[0]} — {r[1]}" for r in rows)
-                if rows else "No records."
+            text = "📋 History\\n\\n" + (
+                "\\n".join(
+                    f"• {r[3] or 'Other Service'} — {r[0]} — {r[1]}"
+                    for r in rows
+                ) if rows else "No records."
             )
+
         elif q.data == "limits":
-            text = f"⚙️ Limits\n\nPer minute: {MAX_SENDS_PER_MINUTE}\nPer day: {MAX_SENDS_PER_DAY}"
+            text = (
+                f"⚙️ Limits\\n\\n"
+                f"Per minute: {MAX_SENDS_PER_MINUTE}\\n"
+                f"Per day: {MAX_SENDS_PER_DAY}\\n"
+                f"Same number cooldown: {PER_NUMBER_COOLDOWN_SECONDS // 60} minutes"
+            )
+
         elif q.data == "send":
-            text = "📱 Send OTP\n\nUse /sendotp 8801XXXXXXXXX"
+            service = SELECTED_SERVICE.get(update.effective_user.id)
+            if service:
+                text = f"📤 Send OTP\\n\\nService: {service}\\n\\nUse /sendotp 8801XXXXXXXXX"
+            else:
+                text = "📤 Send OTP\\n\\nSelect a service first."
+
         else:
             text = "🔐 OTP Admin Panel"
 
     await q.edit_message_text(text, reply_markup=menu())
+'''
+text = text[:start] + handler + text[end:]
 
-def main():
-    if BOT_TOKEN == "PASTE_YOUR_BOT_TOKEN_HERE":
-        raise RuntimeError("Put your BotFather token in BOT_TOKEN.")
-    if not ADMIN_IDS or 123456789 in ADMIN_IDS:
-        raise RuntimeError("Replace the example ADMIN_IDS value.")
-    init_db()
-    app = Application.builder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("sendotp", sendotp))
-    app.add_handler(CallbackQueryHandler(buttons))
-    print("OTP admin bot started.")
-    app.run_polling(drop_pending_updates=True)
+# Update start screen.
+text = text.replace(
+    'await update.message.reply_text("🔐 OTP Admin Panel", reply_markup=menu())',
+    'await update.message.reply_text("🔐 OTP Admin Panel\\n\\nSelect a service below.", reply_markup=menu())'
+)
 
-if __name__ == "__main__":
-    main()
+out = Path("/mnt/data/bot_service_select.py")
+out.write_text(text, encoding="utf-8")
+print(out)
