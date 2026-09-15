@@ -8,7 +8,7 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Cont
 # PUT YOUR NEW TELEGRAM BOT TOKEN BETWEEN THE QUOTES BELOW.
 # Do NOT use the old token that was visible in your screenshot.
 # ============================================================
-BOT_TOKEN = "PASTE_YOUR_NEW_BOT_TOKEN_HERE"
+BOT_TOKEN = "8603037987:AAHQoeiYOoSQ_m-vVcflWnC8gFOgYhau0Xc"
 
 FACEBOOK_SIGNUP_URL = "https://www.facebook.com/r.php"
 
