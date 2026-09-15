@@ -5,7 +5,7 @@ from flask import Flask
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ContextTypes
 
-BOT_TOKEN = os.environ["BOT_TOKEN"]
+BOT_TOKEN = os.environ["8603037987:AAGGsVvwtd5POCxed6JFPRdwoQ43gUFjuJk"]
 
 # Official Facebook signup page.
 FACEBOOK_SIGNUP_URL = "https://www.facebook.com/r.php"
