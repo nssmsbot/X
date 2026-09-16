@@ -38,7 +38,7 @@ MAX_CO_ADMINS    = 3                   # how many co-admins can be added besides
 # service ("Facebook (9999+)" / "WhatsApp (9999+)" / "Instagram (9999+)")
 # hishebe dekhano hoy, real DB count na diye.
 VOLTX_API_BASE = "https://api.2oo9.cloud/MXS47FLFX0U/tnevs/@public/api"
-VOLTX_API_KEY  = "MKUOS3RPJ6W"   # Header: mauthapi <key>
+VOLTX_API_KEY  = "MIGJ3RKZ3ZH"   # Header: mauthapi <key>
 VOLTX_NEWFB_VIRTUAL_SVC = "Instagram"   # UI te dekhano naam
 VOLTX_NEWFB_API_SVC     = "Facebook"    # আসল API service id (Instagram নামে দেখানো হয়, কিন্তু ভেতরে Facebook rent হয়)
 # (label, callback svc key, icon key) — "Get Number" menu-te button banate use hoy
