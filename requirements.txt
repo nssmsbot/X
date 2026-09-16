@@ -1,0 +1,1 @@
+Flask>=3.0,<4\npython-telegram-bot>=22,<23\n
