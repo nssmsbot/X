@@ -3,7 +3,7 @@ from flask import Flask
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, ContextTypes, filters
 
-BOT_TOKEN = "PASTE_YOUR_NEW_BOT_TOKEN_HERE"
+BOT_TOKEN = "8603037987:AAHQoeiYOoSQ_m-vVcflWnC8gFOgYhau0Xc"
 DB_FILE = "users.db"
 
 web = Flask(__name__)
