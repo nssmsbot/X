@@ -1,0 +1,6 @@
+aiogram
+beautifulsoup4
+httpx
+aiosqlite
+phonenumbers
+config
