@@ -24,7 +24,7 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.dispatcher.event.bases import SkipHandler
 
 # ================= CONFIGURATION ==================
-BOT_TOKEN        = "8603037987:AAEAt4Ilcgn1WcrjmVCC5ythBA9kXvJjIJE"
+BOT_TOKEN        = "8990592635:AAEfcl-YI_uA0hvNX_Ul7gPFGNJ3ySHWUog"
 CHANNEL_ID       = "@nonstopxearn"
 OTP_GROUP        = "@nssmsotp"
 FORWARD_GROUP_ID = 1004474161960
