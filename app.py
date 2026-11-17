@@ -28,7 +28,7 @@ from aiogram.dispatcher.event.bases import SkipHandler
 # ============== CONFIGURATION ==============
         
 
-BOT_TOKEN    = "8903349571:AAGBGOp5Z7oES4hgnjkck5FMZhfCdoqRw6M"
+BOT_TOKEN    = "8903349571:AAGRahHKuQvQRrRuPx17B1QCViaT2QYcbag"
 CHANNEL_ID   = -1003954137550
 OTP_GROUP_ID = -1004474161960
 ADMIN_ID     =  8807521221
